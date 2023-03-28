@@ -12,10 +12,12 @@ namespace Infrastructure.Data.Repositories
     public class OrderRepository : IRepository<Order>
     {
         private readonly ApplicationDbContext dbContext;
+        private readonly IRepository<CustomerMembership> customerMembershipRepository;
 
-        public OrderRepository(ApplicationDbContext dbContext)
+        public OrderRepository(ApplicationDbContext dbContext, IRepository<CustomerMembership> customerMembershipRepository)
         {
             this.dbContext = dbContext;
+            this.customerMembershipRepository = customerMembershipRepository;
         }
 
         public async Task<Order> GetByIdAsync(int id)
@@ -32,6 +34,7 @@ namespace Infrastructure.Data.Repositories
 
         public async Task<Order> AddAsync(Order entity)
         {
+            ProcessOrder(entity);
             await dbContext.Order.AddAsync(entity);
             return entity;
         }
@@ -48,6 +51,28 @@ namespace Infrastructure.Data.Repositories
         public async Task SaveChangesAsync()
         {
             await dbContext.SaveChangesAsync();
+        }
+
+        public void ProcessOrder(Order order)
+        {
+            // TODO: Add logic to process the order.
+
+            if (order.OrderProducts.Any(op => op.Membership.Name != null))
+            {
+                var customerMembership = new CustomerMembership
+                {
+                    CustomerId = order.CustomerID,
+                    IsActive = true
+                };
+
+                customerMembershipRepository.AddAsync(customerMembership);
+            }
+
+            if (order.OrderProducts.Any(op => op.Product.Category == "Physical"))
+            {
+                // TODO: Generate a shipping slip for the order.
+            }
+
         }
 
     }
