@@ -16,13 +16,13 @@ namespace TestProject
     {
         private readonly Mock<IOrderService> mockOrderService;
         private readonly Mock<ILogger<OrderController>> mockLogger;
-        private readonly OrderController controller;
+        private readonly OrderController orderController;
 
         public OrderControllerTests()
         {
             mockOrderService = new Mock<IOrderService>();
             mockLogger = new Mock<ILogger<OrderController>>();
-            controller = new OrderController(mockOrderService.Object, mockLogger.Object);
+            orderController = new OrderController(mockOrderService.Object, mockLogger.Object);
         }
 
         [Fact]
@@ -37,7 +37,7 @@ namespace TestProject
             mockOrderService.Setup(x => x.GetAllAsync()).ReturnsAsync(orders);
 
             // Act
-            var result = await controller.GetOrdersAsync();
+            var result = await orderController.GetOrdersAsync();
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -54,7 +54,7 @@ namespace TestProject
             mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync(order);
 
             // Act
-            var result = await controller.GetOrderByIdAsync(orderId);
+            var result = await orderController.GetOrderByIdAsync(orderId);
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result.Result);
@@ -70,7 +70,7 @@ namespace TestProject
             mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync((OrderDto)null);
 
             // Act
-            var result = await controller.GetOrderByIdAsync(orderId);
+            var result = await orderController.GetOrderByIdAsync(orderId);
 
             // Assert
             Assert.IsType<NotFoundResult>(result.Result);
@@ -86,7 +86,7 @@ namespace TestProject
             mockOrderService.Setup(x => x.AddAsync(orderDto)).Callback<OrderDto>(x => x.Id = orderId);
 
             // Act
-            var result = await controller.AddOrderAsync(orderDto);
+            var result = await orderController.AddOrderAsync(orderDto);
 
             // Assert
             var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -172,8 +172,6 @@ namespace TestProject
 
             mockOrderService.Setup(x => x.AddAsync(orderDto)).ReturnsAsync(addedOrderDto);
 
-            var orderController = new OrderController(mockOrderService.Object, mockLogger.Object);
-
             // Act
             var result = await orderController.AddOrderAsync(orderDto);
 
@@ -188,11 +186,11 @@ namespace TestProject
             // Arrange
             var orderDto = new OrderDto();
 
-            var controller = new OrderController(mockOrderService.Object, mockLogger.Object);
-            controller.ModelState.AddModelError("CustomerId", "Customer Id is required");
+
+            orderController.ModelState.AddModelError("CustomerId", "Customer Id is required");
 
             // Act
-            var result = await controller.AddOrderAsync(orderDto);
+            var result = await orderController.AddOrderAsync(orderDto);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result);
@@ -230,10 +228,10 @@ namespace TestProject
             };
             mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync(orderDto);
 
-            var controller = new OrderController(mockOrderService.Object, mockLogger.Object);
+
 
             // Act
-            var result = await controller.GetOrderByIdAsync(orderId);
+            var result = await orderController.GetOrderByIdAsync(orderId);
 
             // Assert
             Assert.IsType<OkObjectResult>(result.Result);
@@ -281,10 +279,10 @@ namespace TestProject
 
             mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync(updateOrderDto);
 
-            var controller = new OrderController(mockOrderService.Object, mockLogger.Object);
+           
 
             // Act
-            var result = await controller.UpdateOrderAsync(orderId, updateOrderDto);
+            var result = await orderController.UpdateOrderAsync(orderId, updateOrderDto);
 
             // Assert
             Assert.IsType<NoContentResult>(result);
@@ -310,9 +308,8 @@ namespace TestProject
             // Arrange
             var orderId = 1;
             mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync((OrderDto)null);
-            var controller = new OrderController(mockOrderService.Object, mockLogger.Object);
             // Act
-            var result = await controller.DeleteOrderAsync(orderId);
+            var result = await orderController.DeleteOrderAsync(orderId);
 
             // Assert
             Assert.IsType<NotFoundResult>(result);
