@@ -17,6 +17,6 @@ namespace Application.Dtos
         [Range(0, double.MaxValue)]
         public decimal Price { get; set; }
 
-        public List<OrderProductDto> OrderProducts { get; set; }
+        public List<OrderProductDto>? OrderProducts { get; set; }
     }
 }

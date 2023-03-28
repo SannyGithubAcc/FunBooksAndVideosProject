@@ -12,6 +12,7 @@ namespace Application.Dtos
 
         [Required]
         [StringLength(100)]
+        [EmailAddress]
         public string Email { get; set; }
 
         [Required]

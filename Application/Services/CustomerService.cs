@@ -4,7 +4,6 @@ using AutoMapper;
 using Domain.Interfaces;
 using Domain.Models;
 
-
 namespace Application.Services
 {
     public class CustomerService : ICustomerService

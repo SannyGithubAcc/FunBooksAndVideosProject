@@ -3,7 +3,6 @@ using Application.Interfaces;
 using FunBooksAndVideosAPI.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
-
 namespace FunBooksAndVideosAPI.Controllers
 {
     [Route("api/[controller]")]

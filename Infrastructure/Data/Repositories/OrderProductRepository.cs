@@ -1,11 +1,6 @@
 ﻿using Domain.Interfaces;
 using Domain.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Data.Repositories
 {
@@ -20,7 +15,14 @@ namespace Infrastructure.Data.Repositories
 
         public async Task<OrderProduct> GetByIdAsync(int id)
         {
-            return await dbContext.OrderProduct.FindAsync(id);
+            try {
+                var data = await dbContext.OrderProduct.FindAsync(id);
+                return data;
+            }
+            catch(Exception ex) {
+                return null;
+            }
+           
         }
 
         public async Task<List<OrderProduct>> GetAllAsync()

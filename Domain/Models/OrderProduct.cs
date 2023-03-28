@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Domain.Models
+﻿namespace Domain.Models
 {
     public class OrderProduct
     {
         public int Id { get; set; }
-        public int OrderID { get; set; }
-        public int? ProductID { get; set; }
-        public int? MembershipID { get; set; }
+        public int Order_ID { get; set; }
+        public int Product_ID { get; set; }
+        public int Membership_ID { get; set; }
         public decimal Price { get; set; }
         public int Quantity { get; set; }
         public Product Product { get; set; }

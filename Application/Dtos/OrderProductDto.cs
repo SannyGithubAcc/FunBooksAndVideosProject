@@ -1,5 +1,4 @@
-﻿using Domain.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Application.Dtos
 {
@@ -7,8 +6,7 @@ namespace Application.Dtos
     {
         public int Id { get; set; }
 
-        [Required]
-        public int OrderId { get; set; }
+        public int? OrderId { get; set; }
 
         public int? ProductId { get; set; }
 
@@ -25,8 +23,7 @@ namespace Application.Dtos
         [Range(1, int.MaxValue)]
         public int Quantity { get; set; }
 
-        public ProductDto Product { get; set; }
-        public MembershipDto Membership { get; set; }
-        public Order OrderDto { get; set; }
+        public ProductDto? Product { get; set; }
+        public MembershipDto? Membership { get; set; }
     }
 }

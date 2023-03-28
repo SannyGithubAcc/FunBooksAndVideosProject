@@ -20,10 +20,32 @@ namespace Infrastructure
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Order>()
-              .HasMany(o => o.OrderProducts)
-              .WithOne(op => op.Order)
-              .HasForeignKey(op => op.OrderID)
-              .OnDelete(DeleteBehavior.Cascade);
+           .HasKey(o => o.Id);
+
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.OrderProducts)
+                .WithOne(op => op.Order)
+                .HasForeignKey(op => op.Order_ID);
+
+            modelBuilder.Entity<OrderProduct>()
+                .HasKey(op => op.Id);
+
+            modelBuilder.Entity<OrderProduct>()
+                .HasOne(op => op.Product)
+                .WithMany()
+                .HasForeignKey(op => op.Product_ID);
+
+            modelBuilder.Entity<OrderProduct>()
+                .HasOne(op => op.Membership)
+                .WithMany()
+                .HasForeignKey(op => op.Membership_ID);
+
+            modelBuilder.Entity<Product>()
+                .HasKey(p => p.Id);
+
+            modelBuilder.Entity<Membership>()
+                .HasKey(m => m.Id);
+
         }
         
     }

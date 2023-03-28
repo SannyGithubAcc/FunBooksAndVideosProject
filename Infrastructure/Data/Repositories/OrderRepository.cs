@@ -1,11 +1,6 @@
 ﻿using Domain.Interfaces;
 using Domain.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Data.Repositories
 {
@@ -23,21 +18,24 @@ namespace Infrastructure.Data.Repositories
         public async Task<Order> GetByIdAsync(int id)
         {
             return await dbContext.Order.Include(o => o.OrderProducts)
-                .FirstOrDefaultAsync(o => o.Id == id);
+                   .FirstOrDefaultAsync(o => o.Id == id);
         }
 
         public async Task<List<Order>> GetAllAsync()
         {
             return await dbContext.Order.Include(o => o.OrderProducts)
-                .ToListAsync();
+                    .ToListAsync();
         }
+
 
         public async Task<Order> AddAsync(Order entity)
         {
             ProcessOrder(entity);
             await dbContext.Order.AddAsync(entity);
+            await dbContext.SaveChangesAsync();
             return entity;
         }
+
 
         public void Update(Order entity)
         {
@@ -48,6 +46,7 @@ namespace Infrastructure.Data.Repositories
         {
             dbContext.Order.Remove(entity);
         }
+
         public async Task SaveChangesAsync()
         {
             await dbContext.SaveChangesAsync();
@@ -61,7 +60,7 @@ namespace Infrastructure.Data.Repositories
             {
                 var customerMembership = new CustomerMembership
                 {
-                    CustomerId = order.CustomerID,
+                    CustomerId = order.Customer_ID,
                     IsActive = true
                 };
 

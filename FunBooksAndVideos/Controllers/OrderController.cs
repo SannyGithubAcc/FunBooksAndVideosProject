@@ -73,9 +73,9 @@ namespace FunBooksAndVideosAPI.Controllers
                 {
                     return BadRequest(ModelState);
                 }             
-                await orderService.AddAsync(createOrderDto);
+                var newOrder = await orderService.AddAsync(createOrderDto);
 
-                return CreatedAtAction(nameof(GetOrderByIdAsync), new { id = createOrderDto.Id }, createOrderDto);
+                return Created(new Uri($"/api/order/{newOrder.Id}", UriKind.Relative), newOrder);
             }
             catch (Exception ex)
             {

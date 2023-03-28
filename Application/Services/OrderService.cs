@@ -47,7 +47,6 @@ namespace Application.Services
             }
             order.price = totalPrice;
             var addedOrder =  await orderRepository.AddAsync(order);
-            await orderRepository.SaveChangesAsync();
             return mapper.Map<OrderDto>(addedOrder);
 
         }
