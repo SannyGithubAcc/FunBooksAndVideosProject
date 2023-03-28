@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.Data
 {
-    public class UnitOfWork : IUnitOfWork
+    public class UnitOfWork : IUnitOfWork , IDisposable
     {
         private readonly ApplicationDbContext dbContext;
 

@@ -172,10 +172,10 @@ namespace TestProject
 
             mockOrderService.Setup(x => x.AddAsync(orderDto)).ReturnsAsync(addedOrderDto);
 
-            var controller = new OrderController(mockOrderService.Object, mockLogger.Object);
+            var orderController = new OrderController(mockOrderService.Object, mockLogger.Object);
 
             // Act
-            var result = await controller.AddOrderAsync(orderDto);
+            var result = await orderController.AddOrderAsync(orderDto);
 
             // Assert
             var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
