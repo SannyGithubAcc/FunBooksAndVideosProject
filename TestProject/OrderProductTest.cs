@@ -70,11 +70,7 @@ namespace TestProject
         public async Task GetAll_ReturnsOkResult_WithOrderProducts()
         {
             // Arrange
-            var orderProducts = new List<OrderProduct>
-    {
-        new OrderProduct { Id = 1 },
-        new OrderProduct { Id = 2 }
-    };
+            
 
             var orderProductDtos = new List<OrderProductDto>
     {
@@ -120,7 +116,6 @@ namespace TestProject
 
             // Act
             var result = await _controller.Delete(1);
-            var typ = result.GetType();
             // Assert
             Assert.True(result.GetType() == typeof(NotFoundObjectResult));
         }

@@ -25,10 +25,6 @@ namespace Application.Services
         public async Task<TDto> GetByIdAsync(int id)
         {
             var entity = await repository.GetByIdAsync(id);
-            if (entity == null)
-            {
-                throw new NotFoundException("The entity was not found.");
-            }
             return mapper.Map<TDto>(entity);
         }
 
@@ -48,22 +44,14 @@ namespace Application.Services
         public async Task UpdateAsync(int id, TDto dto)
         {
             var entity = await repository.GetByIdAsync(id);
-            if (entity == null)
-            {
-                throw new NotFoundException("The entity was not found.");
-            }
             mapper.Map(dto, entity);
             repository.Update(entity);
             await unitOfWork.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
-        {
+          {
             var entity = await repository.GetByIdAsync(id);
-            if (entity == null)
-            {
-                throw new NotFoundException("The entity was not found.");
-            }
             repository.Delete(entity);
             await unitOfWork.SaveChangesAsync();
         }

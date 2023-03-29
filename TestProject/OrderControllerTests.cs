@@ -92,7 +92,6 @@ namespace TestProject
         {
             // Arrange
             var orderId = 1;
-            var order = new Order { Id = orderId };
             var orderDto = new OrderDto { Id = orderId };
             _mockOrderService.Setup(s => s.GetByIdAsync(orderId)).Returns(Task.FromResult(orderDto));
 
@@ -124,11 +123,6 @@ namespace TestProject
         public async Task GetAll_ReturnsOrders_WhenOrdersExist()
         {
             // Arrange
-            var orders = new List<Order>
-        {
-            new Order { Id = 1 },
-            new Order { Id = 2 }
-        };
             var orderDto = new List<OrderDto>
         {
             new OrderDto { Id = 1 },

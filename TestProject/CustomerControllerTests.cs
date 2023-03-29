@@ -117,7 +117,6 @@ namespace TestProject
         {
             // Arrange
             int customerId = 1;
-            var customer = new Customer { Id = customerId, Name = "Test Customer", Email = "test@example.com" };
             var customerDto = new CustomerDto { Id = customerId, Name = "Updated Customer", Email = "updated@example.com" };
             _mockCustomerService.Setup(s => s.GetByIdAsync(customerId)).Returns(Task.FromResult(customerDto));
 
