@@ -1,86 +1,76 @@
-﻿using Application.Dtos;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Threading.Tasks;
+using Application.Dtos;
 using Application.Interfaces;
-using FunBooksAndVideosAPI.Exceptions;
+using Application.Services;
+using Domain.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace FunBooksAndVideosAPI.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class CustomerController : ControllerBase
     {
-        private readonly ICustomerService customerService;
+        private readonly IEntityService<Customer, CustomerDto> customerService;
         private readonly ILogger<CustomerController> logger;
 
-        public CustomerController(ICustomerService customerService,ILogger<CustomerController> logger)
+        public CustomerController(IEntityService<Customer, CustomerDto> customerService, ILogger<CustomerController> logger)
         {
             this.customerService = customerService;
             this.logger = logger;
         }
 
-        [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomersAsync()
-        {
-            try
-            {
-                var customers = await customerService.GetAllAsync();
-                return Ok(customers);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error occurred while getting customers.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error occurred while getting customers.");
-            }
-        }
-
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<CustomerDto>> GetCustomerByIdAsync(int id)
+        public async Task<ActionResult<CustomerDto>> GetById(int id)
         {
             try
             {
-                var customer = await customerService.GetByIdAsync(id);
+                var entity = await customerService.GetByIdAsync(id);
 
-                if (customer == null)
-                {
-                    return NotFound();
-                }
-               return Ok(customer);
+                return Ok(entity);
             }
-            catch (Exception ex)
+            catch (NotFoundException ex)
             {
-                logger.LogError(ex, "Error occurred while getting customer by ID.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error occurred while getting customer by ID.");
+                logger.LogError(ex.Message);
+                return NotFound(ex.Message);
             }
+        }
+
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<List<CustomerDto>>> GetAll()
+        {
+            var entities = await customerService.GetAllAsync();
+            return Ok(entities);
         }
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<CustomerDto>> AddCustomerAsync(CustomerDto createCustomerDto)
+        public async Task<ActionResult<CustomerDto>> Add(CustomerDto dto)
         {
             try
             {
                 if (!ModelState.IsValid)
                 {
+                    logger.LogError("Invalid model state");
                     return BadRequest(ModelState);
                 }
-                var addedCustomer = await customerService.AddAsync(createCustomerDto);
+                var entity = await customerService.AddAsync(dto);
 
-                return Created(new Uri($"/api/customer/{addedCustomer.Id}", UriKind.Relative), addedCustomer);
-
+                return CreatedAtAction(nameof(GetById), new { id = entity.Id }, entity);
             }
-            catch (BadRequestException ex)
+            catch (ValidationException ex)
             {
-                logger.LogInformation(ex.Message);
+                logger.LogError(ex.Message);
                 return BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "An error occurred while creating a customer");
-                return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
 
@@ -88,46 +78,47 @@ namespace FunBooksAndVideosAPI.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateCustomerAsync(int id, CustomerDto updateCustomerDto)
+        public async Task<IActionResult> Update(int id, CustomerDto dto)
         {
             try
             {
                 if (!ModelState.IsValid)
                 {
+                    logger.LogError("Invalid model state");
                     return BadRequest(ModelState);
                 }
-                var customer = await customerService.GetByIdAsync(id);
+                await customerService.UpdateAsync(id, dto);
 
-                if (customer == null)
-                {
-                    return NotFound();
-                }
-                await customerService.UpdateAsync(updateCustomerDto);
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (NotFoundException ex)
             {
-                logger.LogError(ex, "Error occurred while updating customer.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error occurred while updating customer.");
+                logger.LogError(ex.Message);
+                return NotFound(ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                logger.LogError(ex.Message);
+                return BadRequest(ex.Message);
             }
         }
 
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteCustomerAsync(int id)
+        public async Task<IActionResult> Delete(int id)
         {
             try
             {
                 await customerService.DeleteAsync(id);
+
                 return NoContent();
             }
-            catch (Exception ex)
+            catch (NotFoundException ex)
             {
-                logger.LogError(ex, "Error occurred while deleting customer.");
-                return StatusCode(StatusCodes.Status500InternalServerError, "Error occurred while deleting customer.");
+                logger.LogError(ex.Message);
+                return NotFound(ex.Message);
             }
         }
     }
 }
-

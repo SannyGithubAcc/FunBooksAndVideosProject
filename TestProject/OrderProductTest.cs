@@ -1,163 +1,159 @@
-﻿using Application.Dtos;
-using Application.Interfaces;
-using FunBooksAndVideosAPI.Controllers;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Moq;
-using System;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Application.Dtos;
+using Application.Interfaces;
+using Application.Services;
+using AutoMapper;
+using Domain.Models;
+using FunBooksAndVideosAPI.Controllers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Routing;
+using Moq;
 using Xunit;
 
 namespace TestProject
 {
     public class OrderProductControllerTests
     {
-        private readonly Mock<IOrderProductService> mockService;
-        private readonly OrderProductController controller;
+        private readonly Mock<IEntityService<OrderProduct, OrderProductDto>> _mockOrderProductService;
+        private readonly OrderProductController _controller;
 
         public OrderProductControllerTests()
         {
-            mockService = new Mock<IOrderProductService>();
-            controller = new OrderProductController(mockService.Object, Mock.Of<ILogger<OrderController>>());
+            _mockOrderProductService = new Mock<IEntityService<OrderProduct, OrderProductDto>>();
+            _controller = new OrderProductController(_mockOrderProductService.Object, null);
         }
 
         [Fact]
-        public async Task GetOrderProductByIdAsyncReturnsOkResultWhenOrderProductExists()
+        public async Task GetById_ReturnsOkResult_WithOrderProduct()
         {
             // Arrange
-            int id = 1;
-            var orderProduct = new OrderProductDto { Id = id };
-            mockService.Setup(s => s.GetOrderProductByIdAsync(id)).ReturnsAsync(orderProduct);
+            var orderProductId = 1;
+            var orderProduct = new OrderProduct { Id = orderProductId, Order_ID = 1, Product_ID = 1, Membership_ID = 0, Price = 100, Quantity = 1 };
+            var orderProductDto = new OrderProductDto { Id = orderProductId, OrderId = 1, ProductId = 1, MembershipId = null, Price = 100, Quantity = 1 };
+
+            _mockOrderProductService.Setup(x => x.GetByIdAsync(orderProductId)).Returns(Task.FromResult(orderProductDto));
 
             // Act
-            var result = await controller.GetOrderProductByIdAsync(id);
+            var result = await _controller.GetById(orderProductId);
 
             // Assert
             Assert.IsType<OkObjectResult>(result.Result);
+
+            var okResult = result.Result as OkObjectResult;
+            Assert.IsType<OrderProductDto>(okResult.Value);
+
+            var resultDto = okResult.Value as OrderProductDto;
+            Assert.Equal(orderProductId, resultDto.Id);
+            Assert.Equal(orderProduct.Order_ID, resultDto.OrderId);
+            Assert.Equal(orderProduct.Product_ID, resultDto.ProductId);
+            Assert.Equal(orderProduct.Price, resultDto.Price);
+            Assert.Equal(orderProduct.Quantity, resultDto.Quantity);
         }
 
         [Fact]
-        public async Task GetOrderProductByIdAsyncReturnsNotFoundResultWhenOrderProductDoesNotExist()
+        public async Task GetById_ReturnsNotFound_WhenOrderProductNotFound()
         {
             // Arrange
-            int id = 1;
-            mockService.Setup(s => s.GetOrderProductByIdAsync(id)).ReturnsAsync(null as OrderProductDto);
+            var orderProductId = 1;
+            _mockOrderProductService.Setup(x => x.GetByIdAsync(orderProductId)).Returns(Task.FromResult((OrderProductDto)null));
 
             // Act
-            var result = await controller.GetOrderProductByIdAsync(id);
+            var result = await _controller.GetById(orderProductId);
 
             // Assert
             Assert.IsType<NotFoundResult>(result.Result);
         }
 
         [Fact]
-        public async Task GetOrderProductByIdAsyncReturnsInternalServerErrorResultWhenServiceThrowsException()
+        public async Task GetAll_ReturnsOkResult_WithOrderProducts()
         {
             // Arrange
-            int id = 1;
-            mockService.Setup(s => s.GetOrderProductByIdAsync(id)).ThrowsAsync(new Exception());
+            var orderProducts = new List<OrderProduct>
+    {
+        new OrderProduct { Id = 1 },
+        new OrderProduct { Id = 2 }
+    };
+
+            var orderProductDtos = new List<OrderProductDto>
+    {
+        new OrderProductDto { Id = 1 },
+        new OrderProductDto { Id = 2 }
+    };
+            _mockOrderProductService.Setup(s => s.GetAllAsync()).Returns(Task.FromResult(orderProductDtos));
+
+           
 
             // Act
-            var result = await controller.GetOrderProductByIdAsync(id);
+            var result = await _controller.GetAll();
 
             // Assert
-            Assert.IsType<StatusCodeResult>(result.Result);
-            var statusCodeResult = (StatusCodeResult)result.Result;
-            Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
+            var okResult = result.Result as OkObjectResult;
+            var orderProductResult = Assert.IsAssignableFrom<IEnumerable<OrderProductDto>>(okResult.Value);
+
+            Assert.Equal(orderProductDtos.Count, orderProductResult.Count());
+            for (int i = 0; i < orderProductDtos.Count; i++)
+            {
+                Assert.Equal(orderProductDtos[i].Id, orderProductResult.ElementAt(i).Id);
+            }
         }
 
         [Fact]
-        public async Task AddOrderProductAsyncReturnsCreatedWhenOrderProductIsValid()
+        public async Task Delete_ReturnsNoContentResult_WhenOrderProductIsDeleted()
         {
             // Arrange
-            var orderProductDto = new OrderProductDto
-            {
-                OrderId = 1,
-                ProductId = 2,
-                Price = -10.99m,
-                Quantity = -1
-            };
-
-            var addedOrderProduct = new OrderProductDto
-            {
-                OrderId = 1,
-                ProductId = 2,
-                Price = -10.99m,
-                Quantity = -1
-            };
-
-            mockService.Setup(x => x.AddOrderProductAsync(orderProductDto))
-                .ReturnsAsync(addedOrderProduct);
+            _mockOrderProductService.Setup(s => s.DeleteAsync(1)).Returns(Task.CompletedTask);
 
             // Act
-            var result = await controller.AddOrderProductAsync(orderProductDto);
+            var result = await _controller.Delete(1);
 
             // Assert
-            Assert.NotNull(result.Result);
+            Assert.True(result.GetType() == typeof(NoContentResult));
         }
 
         [Fact]
-        public async Task AddOrderProductAsyncReturnsBadRequestWhenOrderProductIsNull()
+        public async Task Delete_ReturnsNotFoundResult_WhenOrderProductIsNotFound()
         {
             // Arrange
-            OrderProductDto orderProductDto = null;
+            _mockOrderProductService.Setup(s => s.DeleteAsync(1)).Throws(new NotFoundException("OrderProduct not found"));
 
             // Act
-            var result = await controller.AddOrderProductAsync(orderProductDto);
-
-             // Assert
-    var internalServerErrorResult = Assert.IsType<StatusCodeResult>(result.Result);
-    Assert.Equal(500, internalServerErrorResult.StatusCode);
+            var result = await _controller.Delete(1);
+            var typ = result.GetType();
+            // Assert
+            Assert.True(result.GetType() == typeof(NotFoundObjectResult));
         }
 
         [Fact]
-        public async Task AddOrderProductAsyncReturnsBadRequestWhenModelStateIsInvalid()
+        public async Task Update_ReturnsNoContentResult_WhenOrderProductIsUpdated()
         {
             // Arrange
-            var orderProductDto = new OrderProductDto
-            {
-                OrderId = 1,
-                ProductId = 2,
-                Price = -10.99m,
-                Quantity = -1
-            };
-
-            controller.ModelState.AddModelError("Price", "The price must be greater than zero.");
-            controller.ModelState.AddModelError("Quantity", "The quantity must be greater than zero.");
+            var orderProductDto = new OrderProductDto { Id = 1, OrderId = 1, ProductId = 1, MembershipId = null, Price = 10.00m, Quantity = 2 };
+            _mockOrderProductService.Setup(s => s.UpdateAsync(1, orderProductDto)).Returns(Task.CompletedTask);
 
             // Act
-            var result = await controller.AddOrderProductAsync(orderProductDto);
+            var result = await _controller.Update(1, orderProductDto);
 
             // Assert
-            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-            Assert.Equal(400, badRequestResult.StatusCode);
+            Assert.True(result.GetType() == typeof(NoContentResult));
         }
 
         [Fact]
-        public async Task AddOrderProductAsyncReturnsInternalServerErrorWhenServiceThrowsException()
+        public async Task Update_ReturnsNotFoundResult_WhenOrderProductIsNotFound()
         {
             // Arrange
-            var orderProductDto = new OrderProductDto
-            {
-                OrderId = 1,
-                ProductId = 2,
-                Price = -10.99m,
-                Quantity = -1
-            };
-
-            mockService.Setup(x => x.AddOrderProductAsync(orderProductDto))
-                .ThrowsAsync(new Exception("An error occurred while adding the order product."));
+            var orderProductDto = new OrderProductDto { Id = 1, OrderId = 1, ProductId = 1, MembershipId = null, Price = 10.00m, Quantity = 2 };
+            _mockOrderProductService.Setup(s => s.UpdateAsync(1, orderProductDto)).Throws(new NotFoundException("OrderProduct not found"));
 
             // Act
-            var result = await controller.AddOrderProductAsync(orderProductDto);
+            var result = await _controller.Update(1, orderProductDto);
 
             // Assert
-            var statusCodeResult = Assert.IsType<StatusCodeResult>(result.Result);
-            Assert.Equal(StatusCodes.Status500InternalServerError, statusCodeResult.StatusCode);
+
+            Assert.True(result.GetType() == typeof(NotFoundObjectResult));
         }
 
-     
+
     }
-
 }

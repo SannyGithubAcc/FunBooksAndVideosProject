@@ -1,302 +1,178 @@
-﻿using Application.Dtos;
-using Application.Interfaces;
-using FunBooksAndVideosAPI.Controllers;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Moq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Application.Dtos;
+using Application.Interfaces;
+using Application.Mappers;
+using Application.Services;
+using AutoMapper;
+using Domain.Models;
+using FunBooksAndVideosAPI.Controllers;
+using FunBooksAndVideosAPI.Mappers;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
 using Xunit;
 
 namespace TestProject
 {
     public class OrderControllerTests
     {
-        private readonly Mock<IOrderService> mockOrderService;
-        private readonly Mock<ILogger<OrderController>> mockLogger;
-        private readonly OrderController orderController;
+        private readonly Mock<IEntityService<Order, OrderDto>> _mockOrderService;
+        private readonly IMapper _mapper;
+        private readonly OrderController _orderController;
 
         public OrderControllerTests()
         {
-            mockOrderService = new Mock<IOrderService>();
-            mockLogger = new Mock<ILogger<OrderController>>();
-            orderController = new OrderController(mockOrderService.Object, mockLogger.Object);
+            _mockOrderService = new Mock<IEntityService<Order, OrderDto>>();
+            _orderController = new OrderController(_mockOrderService.Object, null);
         }
 
+
         [Fact]
-        public async Task GetOrdersAsync_ReturnsOk()
+        public async Task Delete_ReturnsNoContentResult_WhenOrderIsDeleted()
         {
             // Arrange
-            var orders = new List<OrderDto>
-            {
-                new OrderDto { Id = 1, CustomerId = 1, Date = DateTime.UtcNow },
-                new OrderDto { Id = 2, CustomerId = 2, Date = DateTime.UtcNow }
-            };
-            mockOrderService.Setup(x => x.GetAllAsync()).ReturnsAsync(orders);
+            _mockOrderService.Setup(s => s.DeleteAsync(1)).Verifiable();
 
             // Act
-            var result = await orderController.GetOrdersAsync();
+            var result = await _orderController.Delete(1);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var model = Assert.IsAssignableFrom<IEnumerable<OrderDto>>(okResult.Value);
-            Assert.Equal(orders.Count, model.Count());
+            _mockOrderService.Verify();
+            Assert.IsType<NoContentResult>(result);
         }
 
         [Fact]
-        public async Task GetOrderByIdAsync_WithValidId_ReturnsOk()
+        public async Task Delete_ReturnsNotFoundResult_WhenOrderIsNotFound()
+        {
+            // Arrange
+             _mockOrderService.Setup(s => s.DeleteAsync(1)).Throws(new NotFoundException("Order not found"));
+
+            // Act
+            var result = await _orderController.Delete(1);
+
+            // Assert
+            Assert.True(result.GetType() == typeof(NotFoundResult));
+        }
+
+        [Fact]
+        public async Task Update_ReturnsNoContentResult_WhenOrderIsUpdated()
         {
             // Arrange
             var orderId = 1;
-            var order = new OrderDto { Id = orderId, CustomerId = 1, Date = DateTime.UtcNow };
-            mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync(order);
+            var orderDto = new OrderDto { Id = orderId };
+            _mockOrderService.Setup(s => s.UpdateAsync(orderId, orderDto)).Verifiable();
 
             // Act
-            var result = await orderController.GetOrderByIdAsync(orderId);
+            var result = await _orderController.Update(orderId, orderDto);
 
             // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var model = Assert.IsAssignableFrom<OrderDto>(okResult.Value);
-            Assert.Equal(order.Id, model.Id);
+            _mockOrderService.Verify();
+            Assert.IsType<NoContentResult>(result);
         }
 
         [Fact]
-        public async Task GetOrderByIdAsync_WithInvalidId_ReturnsNotFound()
+        public async Task Update_ReturnsNotFoundResult_WhenOrderIsNotFound()
         {
             // Arrange
             var orderId = 1;
-            mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync((OrderDto)null);
+            var orderDto = new OrderDto { Id = orderId };
+            _mockOrderService.Setup(s => s.UpdateAsync(orderId, orderDto)).Throws(new NotFoundException("Order not found"));
 
             // Act
-            var result = await orderController.GetOrderByIdAsync(orderId);
+            var result = await _orderController.Update(orderId, orderDto);
+
+            // Assert
+            Assert.True(result.GetType() == typeof(NotFoundResult));
+        }
+
+        [Fact]
+        public async Task GetById_ReturnsOrder_WhenOrderExists()
+        {
+            // Arrange
+            var orderId = 1;
+            var order = new Order { Id = orderId };
+            var orderDto = new OrderDto { Id = orderId };
+            _mockOrderService.Setup(s => s.GetByIdAsync(orderId)).Returns(Task.FromResult(orderDto));
+
+            // Act
+            var result = await _orderController.GetById(orderId);
+
+            // Assert
+            Assert.IsType<OkObjectResult>(result.Result);
+            var okObjectResult = result.Result as OkObjectResult;
+            Assert.NotNull(okObjectResult);
+            Assert.IsType<OrderDto>(okObjectResult.Value);
+            var orderResult = okObjectResult.Value as OrderDto;
+            Assert.Equal(orderDto.Id, orderResult.Id);
+        }
+        [Fact]
+        public async Task GetById_ReturnsNotFound_WhenOrderDoesNotExist()
+        {
+            // Arrange
+            var orderId = 1;
+            _mockOrderService.Setup(s => s.GetByIdAsync(orderId)).Returns(Task.FromResult((OrderDto)null));
+
+            // Act
+            var result = await _orderController.GetById(orderId);
 
             // Assert
             Assert.IsType<NotFoundResult>(result.Result);
         }
-
-         [Fact]
-        public async Task AddOrderAsync_Returns_SuccessStatus()
-        {
-            // Arrange
-            var orderDto = new OrderDto
-            {
-                CustomerId = 1,
-                Date = DateTime.Now,
-                Price = 48.50m,
-                OrderProducts = new List<OrderProductDto>
-            {
-                new OrderProductDto
-                {
-                    OrderId = 1,
-                    ProductId = 1,
-                    Price = 24.50m,
-                    Quantity = 1
-                },
-                new OrderProductDto
-                {
-                   OrderId = 1,
-                    ProductId = 2,
-                    Price = 24.00m,
-                    Quantity = 1
-                }
-            }
-            };
-
-            var addedOrderDto = new OrderDto
-            {
-                Id = 1,
-                CustomerId = 1,
-                Date = DateTime.Now,
-                Price = 48.50m,
-                OrderProducts = new List<OrderProductDto>
-            {
-                new OrderProductDto
-                {
-                    Id = 1,
-                    OrderId = 1,
-                    ProductId = 1,
-                    Price = 24.50m,
-                    Quantity = 1,
-                    Product = new ProductDto
-                    {
-                        Id = 1,
-                        Name = "Comprehensive First Aid Training",
-                        Barcode = "1234567890",
-                        IsActive = true,
-                        Description = "Video training course for first aid",
-                        Price = 24.50m,
-                        Category = "Training"
-                    }
-                },
-                new OrderProductDto
-                {
-                    Id = 2,
-                    OrderId = 1,
-                    ProductId = 2,
-                    Price = 24.00m,
-                    Quantity = 1,
-                    Product = new ProductDto
-                    {
-                        Id = 2,
-                        Name = "The Girl on the Train",
-                        Barcode = "0987654321",
-                        IsActive = true,
-                        Description = "Mystery novel",
-                        Price = 24.00m,
-                        Category = "Fiction"
-                    }
-                }
-            }
-            };
-
-
-            mockOrderService.Setup(x => x.AddAsync(orderDto)).ReturnsAsync(addedOrderDto);
-
-            // Act
-            var result = await orderController.AddOrderAsync(orderDto);
-            Assert.IsType<CreatedResult>(result);
-            // Assert
-
-        }
         [Fact]
-        public async Task AddOrderAsync_ReturnsBadRequest_WhenInvalidModel()
+        public async Task GetAll_ReturnsOrders_WhenOrdersExist()
         {
             // Arrange
-            var orderDto = new OrderDto();
-
-
-            orderController.ModelState.AddModelError("CustomerId", "Customer Id is required");
-
-            // Act
-            var result = await orderController.AddOrderAsync(orderDto);
-
-            // Assert
-            Assert.IsType<BadRequestObjectResult>(result);
-        }
-
-        [Fact]
-        public async Task GetOrderByIdAsync_ReturnsOk_WhenOrderExists()
+            var orders = new List<Order>
         {
-            // Arrange
-            var orderId = 1;
-
-            var orderDto = new OrderDto
-            {
-                Id = orderId,
-                CustomerId = 1,
-                Date = DateTime.Today,
-                OrderProducts = new List<OrderProductDto>
-            {
-                new OrderProductDto
-                {
-                    OrderId = 1,
-                    ProductId = 1,
-                    Price = 24.50m,
-                    Quantity = 1
-                },
-                new OrderProductDto
-                {
-                   OrderId = 1,
-                    ProductId = 2,
-                    Price = 24.00m,
-                    Quantity = 1
-                }
-            }
-
-            };
-            mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync(orderDto);
-
-
+            new Order { Id = 1 },
+            new Order { Id = 2 }
+        };
+            var orderDto = new List<OrderDto>
+        {
+            new OrderDto { Id = 1 },
+            new OrderDto { Id = 2 }
+        };
+            _mockOrderService.Setup(s => s.GetAllAsync()).Returns(Task.FromResult(orderDto));
 
             // Act
-            var result = await orderController.GetOrderByIdAsync(orderId);
+            var result = await _orderController.GetAll();
 
             // Assert
             Assert.IsType<OkObjectResult>(result.Result);
-            var okResult = result.Result as OkObjectResult;
-            Assert.IsType<OrderDto>(okResult.Value);
-            var orderResult = okResult.Value as OrderDto;
-            Assert.Equal(orderDto.Id, orderResult.Id);
-            Assert.Equal(orderDto.CustomerId, orderResult.CustomerId);
-            Assert.Equal(orderDto.OrderProducts.Count, orderResult.OrderProducts.Count);
-            for (int i = 0; i < orderDto.OrderProducts.Count; i++)
+            var okObjectResult = result.Result as OkObjectResult;
+            Assert.NotNull(okObjectResult);
+            Assert.IsType<List<OrderDto>>(okObjectResult.Value);
+            var orderResults = okObjectResult.Value as List<OrderDto>;
+            Assert.Equal(orderDto.Count, orderResults.Count);
+            for (var i = 0; i < orderDto.Count; i++)
             {
-                Assert.Equal(orderDto.OrderProducts[i].Id, orderResult.OrderProducts[i].Id);
-                Assert.Equal(orderDto.OrderProducts[i].Price, orderResult.OrderProducts[i].Price);
+                Assert.Equal(orderDto[i].Id, orderResults[i].Id);
             }
         }
 
         [Fact]
-        public async Task UpdateOrderAsync_ReturnsNoContent_WhenOrderExists()
+        public async Task GetAll_ReturnsEmptyList_WhenNoOrdersExist()
         {
             // Arrange
-            var orderId = 1;
-            var updateOrderDto = new OrderDto
-            {
-                Id = orderId,
-                CustomerId = 1,
-                OrderProducts = new List<OrderProductDto>
-            {
-                new OrderProductDto
-                {
-                    OrderId = 1,
-                    ProductId = 1,
-                    Price = 24.50m,
-                    Quantity = 1
-                },
-                new OrderProductDto
-                {
-                    OrderId = 1,
-                    ProductId = 2,
-                    Price = 24.00m,
-                    Quantity = 1
-                }
-            }
-            };
-
-
-            mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync(updateOrderDto);
-
-           
+            var orders = new List<OrderDto>();
+            _mockOrderService.Setup(s => s.GetAllAsync()).Returns(Task.FromResult(orders));
 
             // Act
-            var result = await orderController.UpdateOrderAsync(orderId, updateOrderDto);
+            var result = await _orderController.GetAll();
 
             // Assert
-            Assert.IsType<NoContentResult>(result);
+            Assert.IsType<OkObjectResult>(result.Result);
+            var okObjectResult = result.Result as OkObjectResult;
+            Assert.NotNull(okObjectResult);
+            Assert.IsType<List<OrderDto>>(okObjectResult.Value);
+            var orderResults = okObjectResult.Value as List<OrderDto>;
+            Assert.Empty(orderResults);
         }
 
-        [Fact]
-        public async Task DeleteOrderAsync_ReturnsNoContent_WhenOrderExists()
-        {
-            // Arrange
-            var orderId = 1;
-            mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync(new OrderDto { Id = orderId });
-            var controller = new OrderController(mockOrderService.Object, mockLogger.Object);
-            // Act
-            var result = await controller.DeleteOrderAsync(orderId);
 
-            // Assert
-            Assert.IsType<NoContentResult>(result);
-        }
-
-        [Fact]
-        public async Task DeleteOrderAsync_ReturnsNotFound_WhenOrderDoesNotExist()
-        {
-            // Arrange
-            var orderId = 1;
-            mockOrderService.Setup(x => x.GetByIdAsync(orderId)).ReturnsAsync((OrderDto)null);
-            // Act
-            var result = await orderController.DeleteOrderAsync(orderId);
-
-            // Assert
-            Assert.IsType<NotFoundResult>(result);
-        }
 
 
     }
 }
-
-
